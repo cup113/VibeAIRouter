@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  vibeai-router:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: vibeai-router
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      - GITEE_API_KEY=${GITEE_API_KEY}
+      - RATE_LIMIT_IP=${RATE_LIMIT_IP:-30}
+      - RATE_LIMIT_GLOBAL=${RATE_LIMIT_GLOBAL:-100}
+      - FIRST_TOKEN_TIMEOUT=${FIRST_TOKEN_TIMEOUT:-20000}
+      - TOTAL_TIMEOUT=${TOTAL_TIMEOUT:-160000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_REQUESTS=${LOG_REQUESTS:-true}
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vibeai-network
+
+networks:
+  vibeai-network:
+    driver: bridge

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeAI Router | 免费·免登录·OpenAI 兼容</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --card: #0d0d0d;
+            --border: #262626;
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
+            --accent: #00ff88;
+            --code-bg: #111111;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 1rem 1.5rem; }
+
+        header { padding: 4rem 0 2rem; text-align: center; }
+
+        h1 {
+            font-size: clamp(2rem, 7vw, 3.5rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            margin-bottom: 0.8rem;
+        }
+
+        .highlight { color: var(--accent); }
+
+        .focus-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .focus-item {
+            background: #111;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            flex: 1;
+            min-width: 200px;
+            text-align: left;
+        }
+        .focus-item b { color: var(--accent); font-size: 1.1rem; display: block; margin-bottom: 4px; }
+        .focus-item p { font-size: 13px; color: var(--text-dim); }
+
+        /* API URL Card - 显眼明示 */
+        .url-banner {
+            background: linear-gradient(90deg, #001a0d 0%, #0d0d0d 100%);
+            border: 2px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .url-label { font-size: 12px; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
+        .url-value { 
+            font-family: ui-monospace, monospace; 
+            font-size: clamp(1rem, 4vw, 1.4rem); 
+            font-weight: 700; 
+            color: #fff;
+            word-break: break-all;
+        }
+
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            grid-column: span 12;
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        /* Model List */
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 0.8rem;
+        }
+
+        .provider-group h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin: 1.5rem 0 0.8rem;
+        }
+
+        .model-item {
+            background: #000;
+            border: 1px solid var(--border);
+            padding: 0.7rem 1rem;
+            border-radius: 4px;
+            font-family: ui-monospace, monospace;
+            font-size: 13px;
+        }
+
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            font-size: 13px;
+            color: #d1d1d1;
+        }
+        .code-kw { color: var(--accent); font-weight: bold; }
+
+        footer {
+            padding: 4rem 0;
+            text-align: center;
+            font-size: 12px;
+            color: #444;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (min-width: 768px) {
+            .card.half { grid-column: span 6; }
+        }
+    </style>
+</head>
+<body>
+    <header class="container">
+        <h1>VibeAI <span class="highlight">Router</span></h1>
+        
+        <div class="focus-box">
+            <div class="focus-item">
+                <b>完全免登录</b>
+                <p>无需 API Key，直接从客户端或后端发起请求。</p>
+            </div>
+            <div class="focus-item">
+                <b>OpenAI 兼容</b>
+                <p>完美适配所有支持 OpenAI 协议的集成工具。</p>
+            </div>
+            <div class="focus-item">
+                <b>聚合免费模型</b>
+                <p>集成多供应商免费额度，30 RPM/IP 速率限制。</p>
+            </div>
+        </div>
+
+        <div class="url-banner">
+            <span class="url-label">API Base URL (接入地址)</span>
+            <span class="url-value">https://vibeai-router.cup11.top/v1</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="bento-grid">
+            <div class="card">
+                <div class="card-title">快速接入示例 (cURL)</div>
+                <pre>
+<span class="code-kw">curl</span> https://vibeai-router.cup11.top/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    <span class="code-kw">"model"</span>: "Qwen/Qwen3-8B",
+    <span class="code-kw">"messages"</span>: [{"role": "user", "content": "你好"}],
+    <span class="code-kw">"stream"</span>: true
+  }'</pre>
+            </div>
+
+            <div class="card">
+                <div class="card-title">当前可用模型</div>
+                
+                <div class="provider-group" style="margin-top: 0;">
+                    <h3>SiliconFlow</h3>
+                    <div class="model-grid">
+                        <div class="model-item">DeepSeek-R1-0528-Qwen3-8B</div>
+                        <div class="model-item">Qwen/Qwen3-8B</div>
+                        <div class="model-item">THUDM/GLM-4.1V-9B-Thinking</div>
+                        <div class="model-item">internlm/internlm2_5-7b-chat</div>
+                    </div>
+                </div>
+                
+                <div class="provider-group">
+                    <h3>Gitee AI</h3>
+                    <div class="model-grid">
+                        <div class="model-item">Lingshu-32B</div>
+                        <div class="model-item">DeepSeek-R1-Distill-Qwen-14B</div>
+                        <div class="model-item">GLM-4.6V-Flash</div>
+                        <div class="model-item">Qwen3-4B</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card half">
+                <div class="card-title">速率限制</div>
+                <p style="color: var(--text-dim); font-size: 13px;">
+                    默认限速 <b style="color:#fff">30 RPM / IP</b>。请勿进行大规模压测，以维护公共资源。
+                </p>
+            </div>
+            
+            <div class="card half">
+                <div class="card-title">隐私说明</div>
+                <p style="color: var(--text-dim); font-size: 13px;">
+                    本网关<b style="color:#fff">不存储</b>任何具体聊天内容（message）。所有请求均实时转发至下游供应商。
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026, cup11. Powered by VibeAI Engine.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
