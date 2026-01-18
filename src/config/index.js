@@ -27,12 +27,28 @@ function loadConfig() {
     mergedConfig.env = process.env.NODE_ENV || mergedConfig.env || 'development';
     mergedConfig.port = process.env.PORT || mergedConfig.port || 3000;
     
+    // 确保rateLimiting结构存在
+    if (!mergedConfig.rateLimiting) {
+      mergedConfig.rateLimiting = {};
+    }
+    if (!mergedConfig.rateLimiting.ip) {
+      mergedConfig.rateLimiting.ip = {};
+    }
+    if (!mergedConfig.rateLimiting.global) {
+      mergedConfig.rateLimiting.global = {};
+    }
+    
     if (process.env.RATE_LIMIT_IP) {
       mergedConfig.rateLimiting.ip.max = parseInt(process.env.RATE_LIMIT_IP);
     }
     
     if (process.env.RATE_LIMIT_GLOBAL) {
       mergedConfig.rateLimiting.global.max = parseInt(process.env.RATE_LIMIT_GLOBAL);
+    }
+    
+    // 确保timeouts结构存在
+    if (!mergedConfig.timeouts) {
+      mergedConfig.timeouts = {};
     }
     
     if (process.env.FIRST_TOKEN_TIMEOUT) {
