@@ -1,6 +1,6 @@
 {
   "name": "vibeai-router",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Free AI Model Proxy - No login required for free model forwarding",
   "main": "src/app.js",
   "scripts": {
@@ -42,6 +42,6 @@
     "supertest": "^6.3.3"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }

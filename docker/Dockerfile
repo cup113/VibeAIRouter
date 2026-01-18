@@ -1,12 +1,16 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
 
+# 安装pnpm
+RUN npm install -g pnpm
+
 COPY package*.json ./
 
-RUN npm ci --only=production
+# 使用pnpm安装生产依赖
+RUN pnpm install --prod --frozen-lockfile
 
 COPY . .
 
