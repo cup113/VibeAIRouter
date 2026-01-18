@@ -59,6 +59,11 @@ function loadConfig() {
       mergedConfig.timeouts.total = parseInt(process.env.TOTAL_TIMEOUT);
     }
     
+    // 确保logging结构存在
+    if (!mergedConfig.logging) {
+      mergedConfig.logging = {};
+    }
+    
     if (process.env.LOG_LEVEL) {
       mergedConfig.logging.level = process.env.LOG_LEVEL;
     }
