@@ -1,7 +1,7 @@
 {
   "env": "development",
-  "port": 3001,
-  
+  "port": 3000,
+
   "providers": {
     "siliconflow": {
       "name": "SiliconFlow",
@@ -20,24 +20,24 @@
       "maxRetries": 2
     }
   },
-  
+
   "models": {
     "default": "Qwen/Qwen3-8B",
-    
+
     "siliconflow": [
       "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
       "Qwen/Qwen3-8B",
       "THUDM/GLM-4.1V-9B-Thinking",
       "internlm/internlm2_5-7b-chat"
     ],
-    
+
     "gitee": [
       "Lingshu-32B",
       "DeepSeek-R1-Distill-Qwen-14B",
       "GLM-4.6V-Flash",
       "Qwen3-4B"
     ],
-    
+
     "mapping": {
       "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B": "siliconflow",
       "Qwen/Qwen3-8B": "siliconflow",
@@ -49,14 +49,14 @@
       "Qwen3-4B": "gitee"
     }
   },
-  
+
   "timeouts": {
     "firstToken": 20000,
-    "total": 160000,
+    "total": 180000,
     "connect": 10000,
     "read": 30000
   },
-  
+
   "rateLimiting": {
     "ip": {
       "windowMs": 60000,
@@ -65,17 +65,17 @@
     },
     "global": {
       "windowMs": 60000,
-      "max": 100,
+      "max": 1200,
       "message": "Too many requests, please try again later."
     }
   },
-  
+
   "logging": {
     "level": "info",
     "logRequests": true,
     "excludeFields": ["messages", "api_key", "password"]
   },
-  
+
   "security": {
     "maxTokens": 20000,
     "maxMessages": 100,

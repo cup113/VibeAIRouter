@@ -92,6 +92,9 @@ class ProviderRegistry {
         logger.warn(`Provider ${providerId} is already registered, updating...`);
       }
       
+      // 存储providerId到provider实例中，便于查找
+      provider._providerId = providerId;
+      
       // 注册提供者
       this.providers.set(providerId, provider);
       logger.info(`Provider ${providerId} registered`);
@@ -127,7 +130,7 @@ class ProviderRegistry {
       }
       
       // 检查提供者是否可用
-      if (!this.providers.has(provider.name.toLowerCase())) {
+      if (!provider._providerId || !this.providers.has(provider._providerId)) {
         throw new ProviderUnavailableError(provider.name);
       }
       

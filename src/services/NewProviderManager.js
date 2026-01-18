@@ -80,6 +80,8 @@ class NewProviderManager {
         continue;
       }
       
+      logger.debug(`Creating provider ${providerId} with API key: ${apiKey.substring(0, 10)}...`);
+      
       // 创建提供者实例
       const provider = this.createProvider(providerId, {
         ...providerConfig,
@@ -109,7 +111,9 @@ class NewProviderManager {
    */
   getApiKeyForProvider(providerId) {
     const envVarName = `${providerId.toUpperCase()}_API_KEY`;
-    return process.env[envVarName];
+    const apiKey = process.env[envVarName];
+    logger.debug(`Looking for API key for ${providerId}: env var ${envVarName} = ${apiKey ? 'Set' : 'Not set'}`);
+    return apiKey;
   }
   
   /**

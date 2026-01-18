@@ -26,8 +26,16 @@ class RequestForwarder {
    */
   async forwardRequest(request, res = null) {
     const model = request.model;
-    const provider = this.providerRegistry.getProviderForModel(model);
     const startTime = Date.now();
+    
+    let provider;
+    try {
+      provider = await this.providerRegistry.getProviderForModel(model);
+    } catch (error) {
+      // 如果获取provider失败，记录错误但不尝试记录到数据库（因为没有provider信息）
+      logger.error(`Failed to get provider for model ${model}:`, error);
+      throw error;
+    }
     
     logger.debug(`Forwarding request to ${provider.name} for model ${model}, stream: ${request.stream}`);
     
@@ -84,14 +92,18 @@ class RequestForwarder {
    * 记录失败请求
    */
   recordRequestFailure({ model, provider, responseTime, error }) {
-    database.recordRequest({
-      model,
-      provider,
-      success: false,
-      responseTime,
-      tokensUsed: 0,
-      errorMessage: error.message
-    });
+    try {
+      database.recordRequest({
+        model: model || 'unknown',
+        provider: provider || 'unknown',
+        success: false,
+        responseTime,
+        tokensUsed: 0,
+        errorMessage: error?.message || 'Unknown error'
+      });
+    } catch (dbError) {
+      logger.error('Failed to record request failure to database:', dbError);
+    }
   }
   
   /**
