@@ -8,12 +8,13 @@ RUN apk add --no-cache python3 make g++
 RUN npm install -g pnpm
 COPY package*.json pnpm-lock.yaml ./
 
-# 使用pnpm安装生产依赖
+# 使用pnpm安装生产依赖并重建原生模块
 RUN pnpm install --prod --frozen-lockfile
+RUN pnpm rebuild better-sqlite3
 
 COPY . .
 
-RUN mkdir -p logs
+RUN mkdir -p logs data
 
 ENV NODE_ENV=production
 ENV PORT=3000

@@ -4,14 +4,26 @@ const logger = require('./logger');
 
 class DatabaseService {
   constructor() {
-    const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/vibeai.db');
-    
-    this.db = new Database(dbPath);
-    this.initDatabase();
+    this.db = null;
+    this.dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/vibeai.db');
+  }
+  
+  connect() {
+    if (!this.db) {
+      try {
+        this.db = new Database(this.dbPath);
+        this.initDatabase();
+        logger.info('Database connected successfully');
+      } catch (error) {
+        logger.error('Failed to connect to database:', error);
+        throw error;
+      }
+    }
+    return this.db;
   }
 
   initDatabase() {
-    this.db.exec(`
+    this.connect().exec(`
       CREATE TABLE IF NOT EXISTS requests (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -51,26 +63,30 @@ class DatabaseService {
   }
 
   recordRequest(data) {
-    const stmt = this.db.prepare(`
-      INSERT INTO requests (model, provider, success, response_time, tokens_used, error_message)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
+    try {
+      const stmt = this.connect().prepare(`
+        INSERT INTO requests (model, provider, success, response_time, tokens_used, error_message)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
 
-    stmt.run(
-      data.model,
-      data.provider,
-      data.success ? 1 : 0,
-      data.responseTime,
-      data.tokensUsed,
-      data.errorMessage
-    );
+      stmt.run(
+        data.model,
+        data.provider,
+        data.success ? 1 : 0,
+        data.responseTime,
+        data.tokensUsed,
+        data.errorMessage
+      );
+    } catch (error) {
+      logger.error('Failed to record request:', error);
+    }
   }
 
   updateHourlyStats() {
     const now = new Date();
     const hour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
     
-    const stats = this.db.prepare(`
+    const stats = this.connect().prepare(`
       SELECT 
         provider,
         COUNT(*) as total_requests,
@@ -82,7 +98,7 @@ class DatabaseService {
       GROUP BY provider
     `).all(hour.toISOString());
 
-    const insertStmt = this.db.prepare(`
+    const insertStmt = this.connect().prepare(`
       INSERT OR REPLACE INTO provider_stats (hour, provider, total_requests, successful_requests, avg_response_time, total_tokens)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
@@ -113,7 +129,7 @@ class DatabaseService {
       whereClause = "WHERE timestamp >= datetime('now', '-30 days')";
     }
 
-    const overall = this.db.prepare(`
+    const overall = this.connect().prepare(`
       SELECT 
         COUNT(*) as total_requests,
         SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful_requests,
@@ -123,7 +139,7 @@ class DatabaseService {
       ${whereClause}
     `).get(...params);
 
-    const byProvider = this.db.prepare(`
+    const byProvider = this.connect().prepare(`
       SELECT 
         provider,
         COUNT(*) as total_requests,
@@ -136,7 +152,7 @@ class DatabaseService {
       ORDER BY total_requests DESC
     `).all(...params);
 
-    const hourlyStats = this.db.prepare(`
+    const hourlyStats = this.connect().prepare(`
       SELECT 
         strftime('%Y-%m-%d %H:00:00', hour) as hour,
         provider,
@@ -158,7 +174,7 @@ class DatabaseService {
   }
 
   getRecentRequests(limit = 50) {
-    return this.db.prepare(`
+    return this.connect().prepare(`
       SELECT 
         id,
         timestamp,
@@ -175,7 +191,7 @@ class DatabaseService {
   }
 
   logAdminAction(action, details, ipAddress) {
-    const stmt = this.db.prepare(`
+    const stmt = this.connect().prepare(`
       INSERT INTO admin_logs (action, details, ip_address)
       VALUES (?, ?, ?)
     `);
@@ -184,7 +200,7 @@ class DatabaseService {
   }
 
   getAdminLogs(limit = 100) {
-    return this.db.prepare(`
+    return this.connect().prepare(`
       SELECT 
         id,
         timestamp,
@@ -201,17 +217,17 @@ class DatabaseService {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const requestsDeleted = this.db.prepare(`
+    const requestsDeleted = this.connect().prepare(`
       DELETE FROM requests 
       WHERE timestamp < ?
     `).run(thirtyDaysAgo.toISOString()).changes;
 
-    const statsDeleted = this.db.prepare(`
+    const statsDeleted = this.connect().prepare(`
       DELETE FROM provider_stats 
       WHERE hour < ?
     `).run(thirtyDaysAgo.toISOString()).changes;
 
-    const logsDeleted = this.db.prepare(`
+    const logsDeleted = this.connect().prepare(`
       DELETE FROM admin_logs 
       WHERE timestamp < ?
     `).run(thirtyDaysAgo.toISOString()).changes;
@@ -220,7 +236,10 @@ class DatabaseService {
   }
 
   close() {
-    this.db.close();
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
   }
 }
 
