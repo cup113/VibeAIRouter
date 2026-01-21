@@ -70,6 +70,7 @@
     "express-rate-limit": "^8.2.1",
     "pocketbase": "^0.26.6",
     "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "zod": "^4.3.5"
   }
 }

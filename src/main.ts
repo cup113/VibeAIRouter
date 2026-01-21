@@ -1,13 +1,19 @@
 import express, { Application, Request, Response, NextFunction } from "express";
 import bodyParser from "body-parser";
 import timeout from "connect-timeout";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import cors from "cors";
 import "express-async-errors";
 import path from "path";
 import fs from "fs";
 
 import { Logger, requestLogger } from "./logger";
+import { db } from "./database";
+import { healthRouter, apiRouter } from "./routes";
+import {
+  contextMiddleware,
+  createRateLimiter,
+  securityHeadersMiddleware,
+} from "./middleware";
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || "development";
@@ -87,11 +93,13 @@ class App {
     this.app.set("trust proxy", 1);
     Logger.info(`Trust proxy configuration: ${this.app.get("trust proxy")}`);
 
+    // 超时处理
     this.app.use(timeout("10s"));
     this.app.use((req: Request, _res: Response, next: NextFunction) => {
       if (!req.timedout) next();
     });
 
+    // CORS 配置
     const corsOptions = {
       origin: (
         origin: string | undefined,
@@ -132,11 +140,14 @@ class App {
     this.app.use(cors(corsOptions));
     this.app.options("*", cors(corsOptions));
 
+    // 请求体解析
     this.app.use(bodyParser.json({ limit: "10mb" }));
     this.app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 
+    // 请求日志
     this.app.use(requestLogger());
 
+    // 优雅关闭检查
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       if (this.app.get("serverClosing")) {
         Logger.warn("Server is shutting down, rejecting new request", {
@@ -157,41 +168,12 @@ class App {
       return;
     });
 
-    const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000,
-      max: 100,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: {
-        error: "Too many requests, please try again later.",
-        code: 429,
-      },
-      keyGenerator: (req: Request) => {
-        return ipKeyGenerator(req.ip || req.socket.remoteAddress || "unknown");
-      },
-      skip: (req: Request) => {
-        if (req.path === "/health" && NODE_ENV === "production") {
-          return true;
-        }
-        return false;
-      },
-    });
-    this.app.use(limiter);
+    // 自定义中间件
+    this.app.use(contextMiddleware);
+    this.app.use(createRateLimiter());
+    this.app.use(securityHeadersMiddleware);
 
-    this.app.use((req: Request, res: Response, next: NextFunction) => {
-      res.setHeader("X-Powered-By", "VibeAI Router");
-      res.setHeader("X-Content-Type-Options", "nosniff");
-      res.setHeader("X-Frame-Options", "DENY");
-      res.setHeader("X-XSS-Protection", "1; mode=block");
-
-      const origin = req.headers.origin;
-      if (origin) {
-        res.setHeader("Vary", "Origin");
-      }
-
-      next();
-    });
-
+    // 静态文件服务
     if (fs.existsSync(path.join(process.cwd(), "public"))) {
       this.app.use(
         "/public",
@@ -207,65 +189,20 @@ class App {
   private setupRoutes(): void {
     Logger.info("Setting up application routes...");
 
-    this.app.get("/health", (_req: Request, res: Response) => {
-      res.json({
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        environment: NODE_ENV,
-        memory: process.memoryUsage(),
-        version: require("../package.json").version,
-      });
-    });
+    // 健康检查和根路由
+    this.app.use("/", healthRouter);
 
-    this.app.get("/", (_req: Request, res: Response) => {
-      res.json({
-        name: "VibeAI Router",
-        version: require("../package.json").version,
-        description: "AI routing service",
-        endpoints: {
-          health: "/health",
-          api: "/api/v1",
-          docs: "/api-docs",
-        },
-        environment: NODE_ENV,
-      });
-    });
-
-    const apiRouter = express.Router();
-
-    apiRouter.get("/", (_req: Request, res: Response) => {
-      res.json({
-        message: "VibeAI API v1",
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    apiRouter.get("/status", (_req: Request, res: Response) => {
-      res.json({
-        service: "vibe-ai-router",
-        status: "operational",
-        timestamp: new Date().toISOString(),
-      });
-    });
-
-    apiRouter.post("/echo", (req: Request, res: Response) => {
-      res.json({
-        message: "Echo received",
-        data: req.body,
-        headers: req.headers,
-        timestamp: new Date().toISOString(),
-      });
-    });
-
+    // API 路由
     this.app.use("/api/v1", apiRouter);
 
+    // 404 处理
     this.app.use("*", (req: Request, res: Response) => {
       res.status(404).json({
         error: "Resource not found",
         path: req.originalUrl,
         method: req.method,
         timestamp: new Date().toISOString(),
+        requestId: (req as any).context?.requestId,
       });
     });
   }
@@ -294,6 +231,7 @@ class App {
           path: req.path,
           method: req.method,
           ip: req.ip,
+          requestId: (req as any).context?.requestId,
         });
 
         if (req.timedout) {
@@ -301,6 +239,7 @@ class App {
             error: "Request timeout",
             message: "Server took too long to process the request",
             code: 408,
+            requestId: (req as any).context?.requestId,
           });
         }
 
@@ -309,6 +248,7 @@ class App {
           error: error.message || "Internal server error",
           code: statusCode,
           timestamp: new Date().toISOString(),
+          requestId: (req as any).context?.requestId,
           ...(NODE_ENV === "development" && { stack: error.stack }),
         };
 
@@ -322,8 +262,13 @@ class App {
    * Starts the HTTP server.
    */
   public async start(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
+        // 初始化数据库连接
+        Logger.info("Initializing database connection...");
+        await db.initialize();
+        Logger.info("Database connection initialized");
+
         this.server = this.app.listen(PORT, () => {
           this.initConnectionTracking();
 
@@ -336,8 +281,12 @@ class App {
           Logger.info(`  - Root: GET http://${HOST}:${PORT}/`);
           Logger.info(`  - Health check: GET http://${HOST}:${PORT}/health`);
           Logger.info(`  - API v1: GET http://${HOST}:${PORT}/api/v1`);
+          Logger.info(`  - Models: GET http://${HOST}:${PORT}/api/v1/models`);
           Logger.info(
-            `  - Echo endpoint: POST http://${HOST}:${PORT}/api/v1/echo`,
+            `  - Providers: GET http://${HOST}:${PORT}/api/v1/providers`,
+          );
+          Logger.info(
+            `  - Chat completions: POST http://${HOST}:${PORT}/api/v1/chat/completions`,
           );
 
           resolve();
@@ -397,7 +346,7 @@ class App {
     this.app.disable("healthCheck");
 
     if (this.server) {
-      return new Promise<void>((_resolve) => {
+      return new Promise<void>(async (_resolve) => {
         Logger.info("Closing server, stopping new connections...");
 
         this.server.close(async (err: any) => {
@@ -488,7 +437,10 @@ class App {
     Logger.info("Performing cleanup tasks...");
 
     try {
-      // Placeholder for cleanup tasks (e.g., close database connections, clean temp files)
+      // 断开数据库连接
+      await db.disconnect();
+      Logger.info("Database connection closed");
+
       Logger.info("Cleanup tasks completed");
     } catch (error: unknown) {
       const errorMessage =
@@ -508,12 +460,13 @@ class App {
    * Stops the server.
    */
   public async stop(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       if (this.server) {
-        this.server.close((err: any) => {
+        this.server.close(async (err: any) => {
           if (err) {
             reject(err);
           } else {
+            await db.disconnect();
             Logger.info("Server stopped");
             resolve();
           }

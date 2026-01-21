@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VibeAI Router - AI Routing Service</title>
+    <style>
+      :root {
+        --primary-color: #4361ee;
+        --secondary-color: #3a0ca3;
+        --accent-color: #7209b7;
+        --light-color: #f8f9fa;
+        --dark-color: #212529;
+        --success-color: #4cc9f0;
+        --warning-color: #f72585;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        line-height: 1.6;
+        color: var(--dark-color);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--box-shadow);
+        text-align: center;
+      }
+
+      .header h1 {
+        color: var(--primary-color);
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .header .subtitle {
+        color: #666;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+      }
+
+      .status-badge {
+        display: inline-block;
+        background: var(--success-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .card {
+        background: white;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+        transition: transform 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+      }
+
+      .card h2 {
+        color: var(--secondary-color);
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 0.5rem;
+      }
+
+      .endpoint-list {
+        list-style: none;
+      }
+
+      .endpoint-item {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border-left: 4px solid var(--primary-color);
+      }
+
+      .method {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+        text-transform: uppercase;
+      }
+
+      .method.get {
+        background: #4caf50;
+        color: white;
+      }
+      .method.post {
+        background: #2196f3;
+        color: white;
+      }
+      .method.put {
+        background: #ff9800;
+        color: white;
+      }
+      .method.delete {
+        background: #f44336;
+        color: white;
+      }
+
+      .api-tester {
+        grid-column: 1 / -1;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--dark-color);
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+      }
+
+      .btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+
+      .btn:hover {
+        background: var(--secondary-color);
+      }
+
+      .btn.secondary {
+        background: #6c757d;
+      }
+
+      .btn.secondary:hover {
+        background: #545b62;
+      }
+
+      .response-area {
+        margin-top: 1rem;
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .response-area pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: "Courier New", monospace;
+        font-size: 0.875rem;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--accent-color)
+        );
+        color: white;
+        border-radius: 8px;
+      }
+
+      .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+      }
+
+      .stat-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+      }
+
+      .footer {
+        text-align: center;
+        color: white;
+        margin-top: 2rem;
+        padding: 1rem;
+        opacity: 0.8;
+      }
+
+      .footer a {
+        color: white;
+        text-decoration: underline;
+      }
+
+      .tab-container {
+        margin-top: 1rem;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 2px solid #eee;
+        margin-bottom: 1rem;
+      }
+
+      .tab {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        font-size: 1rem;
+        cursor: pointer;
+        color: #666;
+        border-bottom: 3px solid transparent;
+      }
+
+      .tab.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 600;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      @media (max-width: 768px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🚀 VibeAI Router</h1>
+        <p class="subtitle">
+          Intelligent AI Routing Service with Load Balancing & Analytics
+        </p>
+        <span class="status-badge" id="statusIndicator"
+          >Checking status...</span
+        >
+      </div>
+
+      <div class="dashboard">
+        <div class="card">
+          <h2>📊 Service Status</h2>
+          <div class="stats-grid" id="serviceStats">
+            <div class="stat-item">
+              <div class="stat-value" id="modelCount">--</div>
+              <div class="stat-label">Available Models</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="providerCount">--</div>
+              <div class="stat-label">AI Providers</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="uptime">--</div>
+              <div class="stat-label">Uptime</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🔌 API Endpoints</h2>
+          <ul class="endpoint-list">
+            <li class="endpoint-item">
+              <span class="method get">GET</span>
+              <strong>/health</strong> - Service health check
+            </li>
+            <li class="endpoint-item">
+              <span class="method get">GET</span>
+              <strong>/api/v1/models</strong> - List available AI models
+            </li>
+            <li class="endpoint-item">
+              <span class="method get">GET</span>
+              <strong>/api/v1/providers</strong> - List AI providers
+            </li>
+            <li class="endpoint-item">
+              <span class="method post">POST</span>
+              <strong>/api/v1/chat/completions</strong> - AI chat completions
+            </li>
+            <li class="endpoint-item">
+              <span class="method get">GET</span>
+              <strong>/api/v1/status</strong> - Service status
+            </li>
+          </ul>
+        </div>
+
+        <div class="card api-tester">
+          <h2>🧪 API Tester</h2>
+
+          <div class="tab-container">
+            <div class="tabs">
+              <button class="tab active" data-tab="chat">
+                Chat Completion
+              </button>
+              <button class="tab" data-tab="models">List Models</button>
+              <button class="tab" data-tab="health">Health Check</button>
+            </div>
+
+            <div class="tab-content active" id="chatTab">
+              <div class="form-group">
+                <label for="apiKey">API Key (optional):</label>
+                <input
+                  type="text"
+                  id="apiKey"
+                  class="form-control"
+                  placeholder="Enter your API key"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="messageInput">Message:</label>
+                <textarea
+                  id="messageInput"
+                  class="form-control"
+                  rows="3"
+                  placeholder="Enter your message here..."
+                >
+Hello, how are you?</textarea
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="modelSelect">Model:</label>
+                <select id="modelSelect" class="form-control">
+                  <option value="">Loading models...</option>
+                </select>
+              </div>
+
+              <button class="btn" onclick="testChatCompletion()">
+                Test Chat API
+              </button>
+              <button class="btn secondary" onclick="clearResponse()">
+                Clear Response
+              </button>
+            </div>
+
+            <div class="tab-content" id="modelsTab">
+              <button class="btn" onclick="fetchModels()">
+                Fetch Available Models
+              </button>
+              <button class="btn" onclick="fetchProviders()">
+                Fetch Providers
+              </button>
+            </div>
+
+            <div class="tab-content" id="healthTab">
+              <button class="btn" onclick="checkHealth()">
+                Check Service Health
+              </button>
+            </div>
+          </div>
+
+          <div class="response-area">
+            <pre id="responseOutput">Response will appear here...</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>
+          VibeAI Router v<span id="version">1.0.0</span> | Environment:
+          <span id="environment">development</span>
+        </p>
+        <p>
+          Powered by PocketBase & Express.js |
+          <a
+            href="https://github.com/yourusername/vibeai-router"
+            target="_blank"
+            >GitHub Repository</a
+          >
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // API Base URL
+      const API_BASE = window.location.origin;
+
+      // DOM Elements
+      const statusIndicator = document.getElementById("statusIndicator");
+      const serviceStats = document.getElementById("serviceStats");
+      const modelCount = document.getElementById("modelCount");
+      const providerCount = document.getElementById("providerCount");
+      const uptime = document.getElementById("uptime");
+      const responseOutput = document.getElementById("responseOutput");
+      const modelSelect = document.getElementById("modelSelect");
+      const versionEl = document.getElementById("version");
+      const environmentEl = document.getElementById("environment");
+
+      // Tab functionality
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          // Remove active class from all tabs and contents
+          document
+            .querySelectorAll(".tab")
+            .forEach((t) => t.classList.remove("active"));
+          document
+            .querySelectorAll(".tab-content")
+            .forEach((c) => c.classList.remove("active"));
+
+          // Add active class to clicked tab and corresponding content
+          tab.classList.add("active");
+          const tabId = tab.getAttribute("data-tab") + "Tab";
+          document.getElementById(tabId).classList.add("active");
+        });
+      });
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        checkServiceStatus();
+        fetchModelsForSelect();
+        loadServiceInfo();
+      });
+
+      async function checkServiceStatus() {
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          const data = await response.json();
+
+          if (data.status === "healthy") {
+            statusIndicator.textContent = "✅ Service Healthy";
+            statusIndicator.style.background = "#4CAF50";
+          } else {
+            statusIndicator.textContent = "⚠️ Service Degraded";
+            statusIndicator.style.background = "#FF9800";
+          }
+
+          // Update stats
+          if (data.database?.healthy) {
+            serviceStats.innerHTML += `
+                        <div class="stat-item">
+                            <div class="stat-value">✅</div>
+                            <div class="stat-label">Database</div>
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          statusIndicator.textContent = "❌ Service Unavailable";
+          statusIndicator.style.background = "#F44336";
+          console.error("Health check failed:", error);
+        }
+      }
+
+      async function loadServiceInfo() {
+        try {
+          const response = await fetch(`${API_BASE}/`);
+          const data = await response.json();
+
+          versionEl.textContent = data.version || "1.0.0";
+          environmentEl.textContent = data.environment || "development";
+
+          // Fetch additional stats
+          const statusResponse = await fetch(`${API_BASE}/api/v1/status`);
+          const statusData = await statusResponse.json();
+
+          if (statusData.stats) {
+            modelCount.textContent = statusData.stats.models || "0";
+            providerCount.textContent = statusData.stats.providers || "0";
+          }
+
+          // Calculate uptime
+          if (statusData.timestamp) {
+            const serverTime = new Date(statusData.timestamp);
+            const now = new Date();
+            const diffMs = now - serverTime;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            uptime.textContent =
+              diffHours > 24
+                ? `${Math.floor(diffHours / 24)}d`
+                : `${diffHours}h`;
+          }
+        } catch (error) {
+          console.error("Failed to load service info:", error);
+        }
+      }
+
+      async function fetchModelsForSelect() {
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/models`);
+          const data = await response.json();
+
+          if (data.success && data.data) {
+            modelSelect.innerHTML = '<option value="">Select a model</option>';
+            data.data.forEach((model) => {
+              const option = document.createElement("option");
+              option.value = model.code;
+              option.textContent = `${model.name} (${model.code})`;
+              modelSelect.appendChild(option);
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch models:", error);
+          modelSelect.innerHTML =
+            '<option value="">Failed to load models</option>';
+        }
+      }
+
+      async function testChatCompletion() {
+        const message = document.getElementById("messageInput").value;
+        const model = document.getElementById("modelSelect").value;
+        const apiKey = document.getElementById("apiKey").value;
+
+        if (!message) {
+          alert("Please enter a message");
+          return;
+        }
+
+        if (!model) {
+          alert("Please select a model");
+          return;
+        }
+
+        showLoading();
+
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
+            },
+            body: JSON.stringify({
+              messages: [{ role: "user", content: message }],
+              model: model,
+              stream: false,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            displayResponse({
+              success: true,
+              model: data.model,
+              response:
+                data.choices?.[0]?.message?.content || "No response content",
+              usage: data.usage,
+              _meta: data._meta,
+            });
+          } else {
+            displayResponse({
+              error: data.error,
+              message: data.message,
+              code: data.code,
+            });
+          }
+        } catch (error) {
+          displayResponse({
+            error: "Request failed",
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      async function fetchModels() {
+        showLoading();
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/models`);
+          const data = await response.json();
+          displayResponse(data);
+        } catch (error) {
+          displayResponse({
+            error: "Failed to fetch models",
+            message: error.message,
+          });
+        }
+      }
+
+      async function fetchProviders() {
+        showLoading();
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/providers`);
+          const data = await response.json();
+          displayResponse(data);
+        } catch (error) {
+          displayResponse({
+            error: "Failed to fetch providers",
+            message: error.message,
+          });
+        }
+      }
+
+      async function checkHealth() {
+        showLoading();
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          const data = await response.json();
+          displayResponse(data);
+        } catch (error) {
+          displayResponse({
+            error: "Health check failed",
+            message: error.message,
+          });
+        }
+      }
+
+      function showLoading() {
+        responseOutput.textContent = "Loading...";
+        responseOutput.style.color = "#666";
+      }
+
+      function displayResponse(data) {
+        responseOutput.textContent = JSON.stringify(data, null, 2);
+        responseOutput.style.color = "#333";
+
+        // Scroll to response
+        responseOutput.parentElement.scrollTop = 0;
+      }
+
+      function clearResponse() {
+        responseOutput.textContent = "Response cleared";
+        responseOutput.style.color = "#666";
+      }
+    </script>
+  </body>
+</html>
