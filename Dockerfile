@@ -16,7 +16,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # 构建项目
-RUN pnpm run build
+RUN pnpm run build:all
 
 # 生产阶段
 FROM node:18-alpine
@@ -34,6 +34,7 @@ RUN pnpm install --prod --frozen-lockfile
 
 # 从构建阶段复制构建产物
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/demo/dist ./demo/dist
 
 # 创建日志目录
 RUN mkdir -p /app/logs

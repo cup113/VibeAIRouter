@@ -16,9 +16,9 @@ import {
   securityHeadersMiddleware,
 } from "./middleware";
 
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 const NODE_ENV = process.env.NODE_ENV || "development";
-const HOST = process.env.HOST || "0.0.0.0";
+const HOST = "0.0.0.0";
 
 class App {
   private app: Application;
@@ -102,36 +102,7 @@ class App {
 
     // CORS 配置
     const corsOptions = {
-      origin: (
-        origin: string | undefined,
-        callback: (err: Error | null, allow?: boolean) => void,
-      ) => {
-        if (!origin) return callback(null, true);
-
-        const allowedOrigins = process.env.ALLOWED_ORIGINS
-          ? process.env.ALLOWED_ORIGINS.split(",")
-          : NODE_ENV === "production"
-            ? []
-            : [
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:8080",
-                "http://localhost:5173",
-                "http://127.0.0.1:3000",
-              ];
-
-        if (allowedOrigins.includes("*") && NODE_ENV !== "production") {
-          Logger.warn("CORS set to allow all origins (development only)");
-          return callback(null, true);
-        }
-
-        if (allowedOrigins.includes(origin)) {
-          return callback(null, true);
-        } else {
-          Logger.warn(`CORS blocked request from ${origin}`);
-          return callback(new Error("Not allowed by CORS"));
-        }
-      },
+      origin: "*",
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
       methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -174,13 +145,11 @@ class App {
     this.app.use(dynamicRateLimiter());
     this.app.use(securityHeadersMiddleware);
 
-    // 静态文件服务
-    if (fs.existsSync(path.join(process.cwd(), "public"))) {
-      this.app.use(
-        "/public",
-        express.static(path.join(process.cwd(), "public")),
-      );
-      Logger.info("Static file directory enabled: /public");
+    // Demo 构建文件服务
+    const demoDistPath = path.join(process.cwd(), "demo", "dist");
+    if (fs.existsSync(demoDistPath)) {
+      this.app.use(express.static(demoDistPath));
+      Logger.info(`Demo static file directory enabled: ${demoDistPath}`);
     }
   }
 
@@ -195,6 +164,29 @@ class App {
 
     // API 路由
     this.app.use("/api/v1", apiRouter);
+
+    // SPA 回退路由
+    const demoDistPath = path.join(process.cwd(), "demo", "dist");
+    const demoIndexPath = path.join(demoDistPath, "index.html");
+
+    if (fs.existsSync(demoDistPath) && fs.existsSync(demoIndexPath)) {
+      this.app.get("*", (req: Request, res: Response, next: NextFunction) => {
+        // 排除 API 和 health 路由
+        if (req.path.startsWith("/api") || req.path === "/health") {
+          return next();
+        }
+
+        // 尝试提供静态文件
+        const filePath = path.join(demoDistPath, req.path);
+        if (fs.existsSync(filePath) && !fs.statSync(filePath).isDirectory()) {
+          return res.sendFile(filePath);
+        }
+
+        // 否则返回 index.html（SPA 路由）
+        res.sendFile(demoIndexPath);
+      });
+      Logger.info("SPA fallback route enabled for Demo");
+    }
 
     // 404 处理
     this.app.use("*", (req: Request, res: Response) => {

@@ -4,18 +4,17 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     volumes:
       - ./src:/app/src
       - ./logs:/app/logs
     environment:
-      - NODE_ENV=development
-      - ALLOWED_ORIGINS=http://localhost:5173
+      - NODE_ENV=production
     env_file:
       - .env
-    command: pnpm run dev
+    command: pnpm run build
 
   pocketbase:
     image: mich4el/pocketbase:latest

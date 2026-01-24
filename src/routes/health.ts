@@ -20,24 +20,4 @@ router.get("/health", async (_req, res) => {
   });
 });
 
-/**
- * 根路由
- */
-router.get("/", (_req, res) => {
-  res.json({
-    name: "VibeAI Router",
-    version: require("../../package.json").version,
-    description: "AI routing service with load balancing and analytics",
-    endpoints: {
-      health: "/health",
-      api: "/api/v1",
-      docs: "/api-docs",
-      models: "/api/v1/models",
-      providers: "/api/v1/providers",
-      chat: "/api/v1/chat/completions",
-    },
-    environment: process.env.NODE_ENV || "development",
-  });
-});
-
 export { router as healthRouter };

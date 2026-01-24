@@ -262,6 +262,7 @@ router.post("/chat/completions", async (req, res) => {
     const requestBody = {
       messages,
       model: selectedModel.code,
+      stream,
       ...otherParams,
     };
 

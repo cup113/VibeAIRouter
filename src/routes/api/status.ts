@@ -105,9 +105,9 @@ router.get("/status/today", async (_req, res) => {
 
 // 辅助函数
 function formatTokens(tokens: number): string {
-  if (tokens < 1000) return `${tokens} tokens`;
-  if (tokens < 1000000) return `${(tokens / 1000).toFixed(1)}K tokens`;
-  return `${(tokens / 1000000).toFixed(2)}M tokens`;
+  if (tokens < 1000) return `${tokens}`;
+  if (tokens < 1000000) return `${(tokens / 1000).toFixed(2)}K`;
+  return `${(tokens / 1000000).toFixed(3)}M`;
 }
 
 function calculatePerHour(requests: number): number {

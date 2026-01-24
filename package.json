@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "build": "tsc",
+    "build:demo": "cd demo && pnpm run docs:build",
+    "build:all": "pnpm run build && pnpm run build:demo",
     "start": "node dist/main.js",
     "start:prod": "cross-env NODE_ENV=production node dist/main.js",
     "start:dev": "cross-env NODE_ENV=development node dist/main.js",
@@ -23,10 +25,9 @@
     "db": "pnpm run db-windows",
     "db-windows": ".\\db\\pocketbase.exe serve --http 0.0.0.0:4162",
     "type-gen": "pocketbase-typegen --db ./db/pb_data/data.db -o src/types/pocketbase-types.ts",
+    "docker": "docker-compose -f docker-compose.yml up --build -d",
     "docker:build": "docker build -t vibe-ai-router .",
     "docker:run": "docker run -p 3000:3000 --env-file .env vibe-ai-router",
-    "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
-    "docker:prod": "docker-compose -f docker-compose.prod.yml up --build -d",
     "audit": "pnpm audit",
     "audit:fix": "pnpm audit fix"
   },
