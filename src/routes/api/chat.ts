@@ -36,22 +36,24 @@ const ChatCompletionResponseSchema = z
     usage: ChatCompletionUsageSchema.optional(),
     system_fingerprint: z.string().optional(),
   })
-  .passthrough();
+  .loose();
 
 const StreamingDeltaSchema = z
   .object({
     role: z.string().optional(),
     content: z.string().optional(),
+    reasoningContent: z.string().optional(),
+    tool_calls: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .loose();
 
 const StreamingChoiceSchema = z
   .object({
     index: z.number(),
     delta: StreamingDeltaSchema,
-    finish_reason: z.string().nullable(),
+    finish_reason: z.string().nullish(),
   })
-  .passthrough();
+  .loose();
 
 const StreamingChunkSchema = z
   .object({
@@ -62,7 +64,7 @@ const StreamingChunkSchema = z
     choices: z.array(StreamingChoiceSchema),
     usage: ChatCompletionUsageSchema.optional(),
   })
-  .passthrough();
+  .loose();
 
 // 推导 TypeScript 类型
 
