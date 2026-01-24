@@ -1,15 +1,30 @@
 import PocketBase from "pocketbase";
-import { TypedPocketBase } from "./types/pocketbase-types";
+import {
+  TypedPocketBase,
+  ModelsResponse,
+  ProvidersResponse,
+  GuestsResponse,
+  UsageLogsResponse,
+  RecordIdString,
+  Create,
+  Update,
+} from "./types/pocketbase-types";
 
 /**
  * PocketBase 数据库客户端管理器
+ * 使用单例模式，不进行管理员认证，允许所有用户访问
  */
 class DatabaseManager {
   private static instance: DatabaseManager;
   private pb: TypedPocketBase | null = null;
   private isConnected = false;
 
-  private constructor() {}
+  /**
+   * 私有构造函数，防止外部实例化
+   */
+  private constructor() {
+    // 初始化时不进行任何操作
+  }
 
   /**
    * 获取单例实例
@@ -22,18 +37,14 @@ class DatabaseManager {
   }
 
   /**
-   * 初始化数据库连接
+   * 初始化数据库连接（不进行管理员认证）
    */
   public async initialize(): Promise<TypedPocketBase> {
     if (this.pb && this.isConnected) {
       return this.pb;
     }
 
-    const pocketbaseUrl = process.env.POCKETBASE_URL || "http://localhost:8090";
-    const adminEmail =
-      process.env.POCKETBASE_ADMIN_EMAIL || "admin@example.com";
-    const adminPassword =
-      process.env.POCKETBASE_ADMIN_PASSWORD || "adminpassword123";
+    const pocketbaseUrl = process.env.POCKETBASE_URL || "http://localhost:4162";
 
     try {
       // 创建 PocketBase 实例
@@ -46,20 +57,23 @@ class DatabaseManager {
         }
       });
 
-      // 尝试使用管理员身份认证
-      await this.pb.admins.authWithPassword(adminEmail, adminPassword);
-
-      console.log(`✅ Connected to PocketBase at ${pocketbaseUrl}`);
+      // 不进行管理员认证，允许所有用户访问
+      console.log(
+        `✅ Connected to PocketBase at ${pocketbaseUrl} (unauthenticated mode)`,
+      );
       this.isConnected = true;
 
       return this.pb;
     } catch (error: any) {
       console.error("❌ Failed to connect to PocketBase:", error.message);
 
-      // 如果认证失败，仍然创建实例但不进行认证
+      // 如果连接失败，仍然创建实例但不标记为已连接
       this.pb = new PocketBase(pocketbaseUrl) as TypedPocketBase;
       this.isConnected = false;
 
+      console.warn(
+        "⚠️  PocketBase connection failed, but instance created (may not be functional)",
+      );
       return this.pb;
     }
   }
@@ -115,7 +129,11 @@ class DatabaseManager {
   /**
    * 获取所有模型
    */
-  public async getAllModels(filters?: { providerId?: string }): Promise<any[]> {
+  public async getAllModels(filters?: { providerId?: RecordIdString }): Promise<
+    ModelsResponse<{
+      provider: ProvidersResponse;
+    }>[]
+  > {
     const pb = this.getClient();
 
     let filter = "";
@@ -124,7 +142,11 @@ class DatabaseManager {
     }
 
     try {
-      const records = await pb.collection("models").getFullList({
+      const records = await pb.collection("models").getFullList<
+        ModelsResponse<{
+          provider: ProvidersResponse;
+        }>
+      >({
         filter,
         sort: "-created",
         expand: "provider",
@@ -139,7 +161,7 @@ class DatabaseManager {
   /**
    * 获取所有提供商
    */
-  public async getAllProviders(): Promise<any[]> {
+  public async getAllProviders(): Promise<ProvidersResponse[]> {
     const pb = this.getClient();
 
     try {
@@ -156,7 +178,7 @@ class DatabaseManager {
   /**
    * 获取或创建访客记录
    */
-  public async getOrCreateGuest(ip: string): Promise<any> {
+  public async getOrCreateGuest(ip: string): Promise<GuestsResponse> {
     const pb = this.getClient();
 
     try {
@@ -170,7 +192,7 @@ class DatabaseManager {
       }
 
       // 创建新访客
-      const guestData = {
+      const guestData: Create<"guests"> = {
         ip,
         requests: 0,
         tokens: 0,
@@ -189,7 +211,7 @@ class DatabaseManager {
    * 更新访客使用统计
    */
   public async updateGuestUsage(
-    guestId: string,
+    guestId: RecordIdString,
     tokensUsed: number,
     requestsIncrement: number = 1,
   ): Promise<void> {
@@ -198,10 +220,12 @@ class DatabaseManager {
     try {
       const guest = await pb.collection("guests").getOne(guestId);
 
-      await pb.collection("guests").update(guestId, {
+      const updateData: Update<"guests"> = {
         requests: (guest.requests || 0) + requestsIncrement,
         tokens: (guest.tokens || 0) + tokensUsed,
-      });
+      };
+
+      await pb.collection("guests").update(guestId, updateData);
     } catch (error: any) {
       console.error("Error updating guest usage:", error.message);
     }
@@ -211,33 +235,39 @@ class DatabaseManager {
    * 创建使用日志
    */
   public async createUsageLog(data: {
-    guestId: string;
-    modelId: string;
+    guestId: RecordIdString;
+    modelId: RecordIdString;
     tokenInput?: number;
     tokenOutput?: number;
     duration?: number;
     firstTokenLatency?: number;
-  }): Promise<void> {
+  }): Promise<UsageLogsResponse> {
     const pb = this.getClient();
 
     try {
-      await pb.collection("usageLogs").create({
+      const logData: Create<"usageLogs"> = {
         guest: data.guestId,
         model: data.modelId,
         tokenInput: data.tokenInput || 0,
         tokenOutput: data.tokenOutput || 0,
         duration: data.duration || 0,
         firstTokenLatency: data.firstTokenLatency || 0,
-      });
+      };
+
+      const usageLog = await pb.collection("usageLogs").create(logData);
+      return usageLog;
     } catch (error: any) {
       console.error("Error creating usage log:", error.message);
+      throw error;
     }
   }
 
   /**
    * 获取提供商 API 密钥（安全地）
    */
-  public async getProviderApiKey(providerId: string): Promise<string | null> {
+  public async getProviderApiKey(
+    providerId: RecordIdString,
+  ): Promise<string | null> {
     const pb = this.getClient();
 
     try {
@@ -268,6 +298,103 @@ class DatabaseManager {
     } catch (error: any) {
       console.error("Error checking guest blacklist:", error.message);
       return false;
+    }
+  }
+
+  /**
+   * 获取今日 token 使用统计
+   */
+  public async getTodayTokenStats(): Promise<{
+    totalTokens: number;
+    totalRequests: number;
+    today: string;
+  }> {
+    const pb = this.getClient();
+
+    try {
+      // 获取今天的日期（YYYY-MM-DD格式）
+      const today = new Date().toISOString().split("T")[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split("T")[0];
+
+      // 查询今日的使用日志
+      const usageLogs = await pb.collection("usageLogs").getFullList({
+        filter: `created >= "${today}" && created < "${tomorrow}"`,
+      });
+
+      // 计算总 token 数和请求数
+      let totalTokens = 0;
+      let totalRequests = 0;
+
+      usageLogs.forEach((log) => {
+        totalTokens += (log.tokenInput || 0) + (log.tokenOutput || 0);
+        totalRequests += 1;
+      });
+
+      return {
+        totalTokens,
+        totalRequests,
+        today,
+      };
+    } catch (error: any) {
+      console.error("Error fetching today's token stats:", error.message);
+      return {
+        totalTokens: 0,
+        totalRequests: 0,
+        today: new Date().toISOString().split("T")[0],
+      };
+    }
+  }
+
+  /**
+   * 获取今日访客请求统计
+   */
+  public async getTodayGuestStats(): Promise<{
+    uniqueGuests: number;
+    totalGuestRequests: number;
+    totalGuestTokens: number;
+  }> {
+    const pb = this.getClient();
+
+    try {
+      // 获取今天的日期
+      const today = new Date().toISOString().split("T")[0];
+      const tomorrow = new Date(Date.now() + 86400000)
+        .toISOString()
+        .split("T")[0];
+
+      // 查询今日有活动的访客
+      const usageLogs = await pb.collection("usageLogs").getFullList({
+        filter: `created >= "${today}" && created < "${tomorrow}"`,
+        expand: "guest",
+      });
+
+      // 统计唯一访客和总请求/总 token
+      const uniqueGuestIds = new Set<string>();
+      let totalGuestRequests = 0;
+      let totalGuestTokens = 0;
+
+      usageLogs.forEach((log) => {
+        if (log.guest) {
+          uniqueGuestIds.add(log.guest);
+          totalGuestRequests += 1;
+          totalGuestTokens += (log.tokenInput || 0) + (log.tokenOutput || 0);
+        }
+      });
+
+      return {
+        uniqueGuests: uniqueGuestIds.size,
+        totalGuestRequests,
+        totalGuestTokens,
+      };
+    } catch (error: any) {
+      console.error("Error fetching today's guest stats:", error.message);
+      return {
+        uniqueGuests: 0,
+        totalGuestRequests: 0,
+        totalGuestTokens: 0,
+      };
     }
   }
 }

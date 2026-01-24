@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { Application, Request, Response, NextFunction } from "express";
 import bodyParser from "body-parser";
 import timeout from "connect-timeout";
@@ -11,7 +12,7 @@ import { db } from "./database";
 import { healthRouter, apiRouter } from "./routes";
 import {
   contextMiddleware,
-  createRateLimiter,
+  dynamicRateLimiter,
   securityHeadersMiddleware,
 } from "./middleware";
 
@@ -170,7 +171,7 @@ class App {
 
     // 自定义中间件
     this.app.use(contextMiddleware);
-    this.app.use(createRateLimiter());
+    this.app.use(dynamicRateLimiter());
     this.app.use(securityHeadersMiddleware);
 
     // 静态文件服务
