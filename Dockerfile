@@ -29,6 +29,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+RUN addgroup -g 1000 -S nodejs && \
+    adduser -S nodejs -u 1000
+
 # 仅复制生产依赖文件
 COPY package.json pnpm-lock.yaml ./
 
@@ -41,8 +44,6 @@ COPY --from=builder /app/demo/dist ./demo/dist
 
 # 创建日志目录并设置权限
 RUN mkdir -p /app/logs && \
-    addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app
 
 USER nodejs
