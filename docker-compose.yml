@@ -8,13 +8,11 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./src:/app/src
       - ./logs:/app/logs
     environment:
       - NODE_ENV=production
     env_file:
       - .env
-    command: pnpm run build
 
   pocketbase:
     image: mich4el/pocketbase:latest
