@@ -15,7 +15,7 @@ services:
       - .env
 
   pocketbase:
-    image: mich4el/pocketbase:latest
+    image: ghcr.io/muchobien/pocketbase:latest
     ports:
       - "4162:8090"
     volumes:
