@@ -11,13 +11,49 @@ services:
       - logs:/app/logs
     environment:
       - NODE_ENV=production
+      - POCKETBASE_URL=http://pocketbase:8090
     env_file:
       - .env
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health', (r) => {if(r.statusCode===200)process.exit(0);else process.exit(1);})",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      pocketbase:
+        condition: service_healthy
 
   pocketbase:
     image: ghcr.io/muchobien/pocketbase:latest
     ports:
-      - "4162:8090"
+      - "8090:8090"
     volumes:
       - ./db/pb_data:/pb_data
       - ./db/pb_migrations:/pb_migrations
+    environment:
+      - PB_MIGRATIONS_DIR=/pb_migrations
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8090/api/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    command: serve --http=0.0.0.0:8090
+
+volumes:
+  logs:

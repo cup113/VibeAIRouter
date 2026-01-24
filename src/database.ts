@@ -44,7 +44,11 @@ class DatabaseManager {
       return this.pb;
     }
 
-    const pocketbaseUrl = process.env.POCKETBASE_URL || "http://localhost:4162";
+    const pocketbaseUrl =
+      process.env.POCKETBASE_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "http://pocketbase:8090"
+        : "http://localhost:4162");
 
     try {
       // 创建 PocketBase 实例
@@ -117,7 +121,9 @@ class DatabaseManager {
 
     try {
       // 发送一个简单的请求来检查连接
-      await this.pb.collection("providers").getList(1, 1);
+      await this.pb.collection("providers").getList(1, 1, {
+        requestKey: null,
+      });
       return { healthy: true };
     } catch (error: any) {
       return { healthy: false, error: error.message };
@@ -167,6 +173,7 @@ class DatabaseManager {
     try {
       const records = await pb.collection("providers").getFullList({
         sort: "-created",
+        requestKey: null,
       });
       return records;
     } catch (error) {
@@ -185,6 +192,7 @@ class DatabaseManager {
       // 尝试查找现有访客
       const existingGuests = await pb.collection("guests").getList(1, 1, {
         filter: `ip = "${ip}"`,
+        requestKey: null,
       });
 
       if (existingGuests.items.length > 0) {
@@ -199,7 +207,9 @@ class DatabaseManager {
         blacklisted: false,
       };
 
-      const newGuest = await pb.collection("guests").create(guestData);
+      const newGuest = await pb.collection("guests").create(guestData, {
+        requestKey: null,
+      });
       return newGuest;
     } catch (error: any) {
       console.error("Error getting/creating guest:", error.message);
@@ -218,14 +228,18 @@ class DatabaseManager {
     const pb = this.getClient();
 
     try {
-      const guest = await pb.collection("guests").getOne(guestId);
+      const guest = await pb.collection("guests").getOne(guestId, {
+        requestKey: null,
+      });
 
       const updateData: Update<"guests"> = {
         requests: (guest.requests || 0) + requestsIncrement,
         tokens: (guest.tokens || 0) + tokensUsed,
       };
 
-      await pb.collection("guests").update(guestId, updateData);
+      await pb.collection("guests").update(guestId, updateData, {
+        requestKey: null,
+      });
     } catch (error: any) {
       console.error("Error updating guest usage:", error.message);
     }
@@ -254,7 +268,9 @@ class DatabaseManager {
         firstTokenLatency: data.firstTokenLatency || 0,
       };
 
-      const usageLog = await pb.collection("usageLogs").create(logData);
+      const usageLog = await pb.collection("usageLogs").create(logData, {
+        requestKey: null,
+      });
       return usageLog;
     } catch (error: any) {
       console.error("Error creating usage log:", error.message);
@@ -271,7 +287,9 @@ class DatabaseManager {
     const pb = this.getClient();
 
     try {
-      const provider = await pb.collection("providers").getOne(providerId);
+      const provider = await pb.collection("providers").getOne(providerId, {
+        requestKey: null,
+      });
       return provider.apiKey || null;
     } catch (error: any) {
       console.error("Error fetching provider API key:", error.message);
@@ -288,6 +306,7 @@ class DatabaseManager {
     try {
       const guests = await pb.collection("guests").getList(1, 1, {
         filter: `ip = "${ip}"`,
+        requestKey: null,
       });
 
       if (guests.items.length === 0) {
@@ -321,6 +340,7 @@ class DatabaseManager {
       // 查询今日的使用日志
       const usageLogs = await pb.collection("usageLogs").getFullList({
         filter: `created >= "${today}" && created < "${tomorrow}"`,
+        requestKey: null,
       });
 
       // 计算总 token 数和请求数
@@ -367,6 +387,7 @@ class DatabaseManager {
       // 查询今日有活动的访客
       const usageLogs = await pb.collection("usageLogs").getFullList({
         filter: `created >= "${today}" && created < "${tomorrow}"`,
+        requestKey: null,
         expand: "guest",
       });
 
