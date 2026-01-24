@@ -33,7 +33,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # 安装生产依赖（不再全局安装 pnpm）
-RUN pnpm install --omit=dev --frozen-lockfile
+RUN npm install --omit=dev --frozen-lockfile
 
 # 从构建阶段复制构建产物
 COPY --from=builder /app/dist ./dist
@@ -51,4 +51,4 @@ USER nodejs
 EXPOSE 3000
 
 # 启动命令
-CMD ["pnpm", "start"]
+CMD ["npm", "start"]
