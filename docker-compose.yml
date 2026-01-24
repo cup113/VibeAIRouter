@@ -8,7 +8,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./logs:/app/logs
+      - logs:/app/logs
     environment:
       - NODE_ENV=production
     env_file:
@@ -20,4 +20,4 @@ services:
       - "4162:8090"
     volumes:
       - ./db/pb_data:/pb_data
-      - ./pb_migrations:/pb_migrations
+      - ./db/pb_migrations:/pb_migrations
