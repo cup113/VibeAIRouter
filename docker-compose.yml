@@ -35,15 +35,14 @@ services:
         max-file: "3"
 
   pocketbase:
-    image: ghcr.io/muchobien/pocketbase:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.pb
     restart: always
     ports:
       - "8090:8090"
     volumes:
       - ./db/pb_data:/pb_data
-      - ./db/pb_migrations:/pb_migrations
-    environment:
-      - PB_MIGRATIONS_DIR=/pb_migrations
     healthcheck:
       test:
         [
@@ -57,5 +56,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
-    command: serve --http=0.0.0.0:8090
