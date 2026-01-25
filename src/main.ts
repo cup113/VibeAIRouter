@@ -95,7 +95,7 @@ class App {
     Logger.info(`Trust proxy configuration: ${this.app.get("trust proxy")}`);
 
     // 超时处理
-    this.app.use(timeout("10s"));
+    this.app.use(timeout("30s"));
     this.app.use((req: Request, _res: Response, next: NextFunction) => {
       if (!req.timedout) next();
     });
